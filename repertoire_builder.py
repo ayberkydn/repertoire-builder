@@ -23,7 +23,8 @@ class RepertoireBuilder:
     def build_repertoire(self, initial_moves_san: Optional[str], max_depth: int,
                          first_move_threshold: float, second_move_threshold: float,
                          third_move_threshold: float, other_moves_threshold: float,
-                         min_rating: int, max_rating: int, time_controls: List[str]) -> RepertoireNode:        self.move_count = 0
+                         min_rating: int, max_rating: int, time_controls: List[str]) -> RepertoireNode:
+        self.move_count = 0
         board = chess.Board()
         
         if initial_moves_san:
@@ -138,9 +139,7 @@ class RepertoireBuilder:
 
         
         # Print score breakdown for the best move (first in sorted list)
-        if analyzed_moves and self.move_count % 50 == 0:
-            best_san, best_stats, best_score = analyzed_moves[0]
-            print(f"Best move at {board.fen()[:30]}...: {best_san} - {best_score.format_detailed()}")
+
         
         for san, move_stats, score_details in analyzed_moves:
             try:
@@ -166,7 +165,7 @@ class RepertoireBuilder:
                     children_to_queue.append((child_node, child_board, current_depth + 1, False))
                 else:
                     best_white_move = self._get_best_white_response(
-                        board, min_rating, max_rating, time_controls, position_threshold
+                        board, min_rating, max_rating, time_controls, other_moves_threshold
                     )
                     
                     if best_white_move:

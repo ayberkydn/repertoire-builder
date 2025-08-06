@@ -11,9 +11,9 @@ analysis:
   popularity_weight: 0.04
   sharpness_weight: 0.01
 
-  initial_threshold: 0.05
-  second_move_threshold: 0.07
-  third_move_threshold: 0.08
+  initial_threshold: 0.02
+  second_move_threshold: 0.02
+  third_move_threshold: 0.02
   other_moves_threshold: 0.09
 
   min_games: 200
