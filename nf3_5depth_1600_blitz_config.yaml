@@ -12,7 +12,9 @@ analysis:
   sharpness_weight: 0.01
 
   initial_threshold: 0.05
-  position_threshold: 0.09
+  second_move_threshold: 0.07
+  third_move_threshold: 0.08
+  other_moves_threshold: 0.09
 
   min_games: 200
   white_win_rate_threshold: 0.60

@@ -10,7 +10,9 @@ analysis:
   win_rate_weight: 0.95
   popularity_weight: 0.05
   initial_threshold: 0.02
-  position_threshold: 0.05
+  second_move_threshold: 0.03
+  third_move_threshold: 0.04
+  other_moves_threshold: 0.05
   min_games: 200
   white_win_rate_threshold: 0.55
 

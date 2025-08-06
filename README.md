@@ -86,8 +86,10 @@ analysis:
   sharpness_weight: 0.35        # Weight for tactical sharpness (0.0-1.0)
   
   # MOVE FILTERING
-  initial_threshold: 0.05       # Popularity threshold for first moves (5%)
-  position_threshold: 0.2       # Popularity threshold for deeper moves (20%)
+  first_move_threshold: 0.05    # Popularity threshold for the 1st move (5%)
+  second_move_threshold: 0.10   # Popularity threshold for the 2nd move (10%)
+  third_move_threshold: 0.15    # Popularity threshold for the 3rd move (15%)
+  other_moves_threshold: 0.20   # Popularity threshold for moves beyond the 3rd (20%)
   
   # QUALITY FILTERS
   min_games: 200               # Minimum games required per position
@@ -237,8 +239,10 @@ analysis:
   win_rate_weight: 0.4      # Lower emphasis on safety
   popularity_weight: 0.05
   sharpness_weight: 0.55    # High emphasis on tactical sharpness
-  initial_threshold: 0.05
-  position_threshold: 0.15
+  first_move_threshold: 0.05
+  second_move_threshold: 0.10
+  third_move_threshold: 0.15
+  other_moves_threshold: 0.15
   min_games: 100
   white_win_rate_threshold: 0.55
 
@@ -261,8 +265,10 @@ analysis:
   win_rate_weight: 0.8      # High emphasis on winning
   popularity_weight: 0.15   # Consider high-rated preferences
   sharpness_weight: 0.05    # Low emphasis on tactics
-  initial_threshold: 0.08
-  position_threshold: 0.2
+  first_move_threshold: 0.08
+  second_move_threshold: 0.15
+  third_move_threshold: 0.20
+  other_moves_threshold: 0.20
   min_games: 500
   white_win_rate_threshold: 0.58
 

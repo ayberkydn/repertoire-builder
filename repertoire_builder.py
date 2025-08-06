@@ -21,9 +21,9 @@ class RepertoireBuilder:
         self.move_count = 0
     
     def build_repertoire(self, initial_moves_san: Optional[str], max_depth: int,
-                        initial_threshold: float, position_threshold: float,
-                        min_rating: int, max_rating: int, time_controls: List[str]) -> RepertoireNode:
-        self.move_count = 0
+                         first_move_threshold: float, second_move_threshold: float,
+                         third_move_threshold: float, other_moves_threshold: float,
+                         min_rating: int, max_rating: int, time_controls: List[str]) -> RepertoireNode:        self.move_count = 0
         board = chess.Board()
         
         if initial_moves_san:
@@ -44,18 +44,22 @@ class RepertoireBuilder:
             # Determine current depth based on number of moves
             current_depth = len(moves)
             
-            self._build_repertoire_bfs(root, max_depth, initial_threshold, position_threshold,
+            self._build_repertoire_bfs(root, max_depth, first_move_threshold, second_move_threshold,
+                                      third_move_threshold, other_moves_threshold,
                                       min_rating, max_rating, time_controls, current_depth)
         else:
             # If no initial moves, start from the default board (empty moves)
             root = RepertoireNode(move="Starting Position", fen=board.fen())
-            self._build_repertoire_bfs(root, max_depth, initial_threshold, position_threshold,
+            self._build_repertoire_bfs(root, max_depth, first_move_threshold, second_move_threshold,
+                                      third_move_threshold, other_moves_threshold,
                                       min_rating, max_rating, time_controls, 0)
         
         return root
     
-    def _build_repertoire_bfs(self, root: RepertoireNode, max_depth: int, initial_threshold: float, 
-                              position_threshold: float, min_rating: int, max_rating: int, 
+    def _build_repertoire_bfs(self, root: RepertoireNode, max_depth: int,
+                              first_move_threshold: float, second_move_threshold: float,
+                              third_move_threshold: float, other_moves_threshold: float,
+                              min_rating: int, max_rating: int, 
                               time_controls: List[str], initial_depth: int):        # Queue contains tuples of (node, board, current_depth, is_white_turn)
         queue = deque()
         
@@ -70,7 +74,8 @@ class RepertoireBuilder:
             # Process this node and get children to add to queue
             children_to_process = self._process_node_bfs(
                 current_node, current_board, current_depth, max_depth,
-                initial_threshold, position_threshold, min_rating, max_rating,
+                first_move_threshold, second_move_threshold, third_move_threshold, other_moves_threshold,
+                min_rating, max_rating,
                 time_controls, is_white_turn
             )
             
@@ -78,9 +83,9 @@ class RepertoireBuilder:
             queue.extend(children_to_process)
     
     def _process_node_bfs(self, node: RepertoireNode, board: chess.Board, current_depth: int,
-                   max_depth: int, initial_threshold: float, position_threshold: float,
-                   min_rating: int, max_rating: int, time_controls: List[str], is_white_turn: bool):
-        
+                           max_depth: int, first_move_threshold: float, second_move_threshold: float,
+                           third_move_threshold: float, other_moves_threshold: float,
+                           min_rating: int, max_rating: int, time_controls: List[str], is_white_turn: bool):        
         children_to_queue = []
         
         position_data = self.lichess_api.get_position_stats(
@@ -115,11 +120,18 @@ class RepertoireBuilder:
             node.termination_reason = f"Insufficient games ({total_games} < {self.min_games})"
             return children_to_queue
         
-        threshold = initial_threshold if current_depth == 1 else position_threshold
+        if current_depth == 1:
+            threshold = first_move_threshold
+        elif current_depth == 2:
+            threshold = second_move_threshold
+        elif current_depth == 3:
+            threshold = third_move_threshold
+        else:
+            threshold = other_moves_threshold
+
         analyzed_moves = self.move_analyzer.analyze_position(position_data, threshold, 
-                                                           board.fen(), min_rating, 
-                                                           max_rating, time_controls)
-        
+                                                             board.fen(), min_rating, 
+                                                             max_rating, time_controls)        
         if not analyzed_moves:
             node.termination_reason = f"No moves above {threshold*100:.0f}% threshold"
             return children_to_queue
@@ -243,8 +255,10 @@ def main():
     win_rate_weight = config['analysis']['win_rate_weight']
     popularity_weight = config['analysis']['popularity_weight']
     sharpness_weight = config['analysis'].get('sharpness_weight', 0.0)
-    initial_threshold = config['analysis']['initial_threshold']
-    position_threshold = config['analysis']['position_threshold']
+    first_move_threshold = config['analysis']['initial_threshold']
+    second_move_threshold = config['analysis']['second_move_threshold']
+    third_move_threshold = config['analysis']['third_move_threshold']
+    other_moves_threshold = config['analysis']['other_moves_threshold']
     min_games = config['analysis']['min_games']
     white_win_rate_threshold = config['analysis']['white_win_rate_threshold']
     api_key = os.getenv('LICHESS_API_KEY')
@@ -257,7 +271,7 @@ def main():
     print(f"Generating repertoire for {initial_moves if initial_moves else 'starting position'} for {depth} moves deep...")
 
     print(f"Parameters: depth={depth}, min_rating={min_rating}, max_rating={max_rating}, time_controls={time_controls}")
-    print(f"Thresholds: initial={initial_threshold}, position={position_threshold}")
+    print(f"Thresholds: 1st={first_move_threshold}, 2nd={second_move_threshold}, 3rd={third_move_threshold}, other={other_moves_threshold}")
     print(f"Min games: {min_games}, white win rate threshold: {white_win_rate_threshold}")
     print()
     
@@ -273,8 +287,10 @@ def main():
         root = repertoire_builder.build_repertoire(
             initial_moves,
             depth,
-            initial_threshold,
-            position_threshold,
+            first_move_threshold,
+            second_move_threshold,
+            third_move_threshold,
+            other_moves_threshold,
             min_rating,
             max_rating,
             time_controls
