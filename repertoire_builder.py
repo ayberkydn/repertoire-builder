@@ -20,62 +20,49 @@ class RepertoireBuilder:
         self.white_win_rate_threshold = white_win_rate_threshold
         self.move_count = 0
     
-    def build_repertoire(self, opening_move: Optional[str], fen: Optional[str], max_depth: int,
+    def build_repertoire(self, initial_moves_san: Optional[str], max_depth: int,
                         initial_threshold: float, position_threshold: float,
                         min_rating: int, max_rating: int, time_controls: List[str]) -> RepertoireNode:
         self.move_count = 0
-        if fen:
-            # Build from arbitrary position
-            try:
-                board = chess.Board(fen)
-            except ValueError:
-                raise ValueError(f"Invalid FEN: {fen}")
+        board = chess.Board()
+        
+        if initial_moves_san:
+            moves = initial_moves_san.split()
+            for i, move_san in enumerate(moves):
+                try:
+                    move = board.parse_san(move_san)
+                    board.push(move)
+                except ValueError:
+                    raise ValueError(f"Invalid move in sequence '{initial_moves_san}': {move_san}")
             
-            # Determine if it's White's turn to move
-            is_white_turn = board.turn == chess.WHITE
-            root = RepertoireNode(move="Position", fen=fen)
+            # The root node represents the position after all initial moves
+            # If no moves were provided, it's the starting FEN
+            root_fen = board.fen()
+            root_move_san = initial_moves_san if initial_moves_san else "Starting Position"
+            root = RepertoireNode(move=root_move_san, fen=root_fen)
+            
+            # Determine current depth based on number of moves
+            current_depth = len(moves)
             
             self._build_repertoire_bfs(root, max_depth, initial_threshold, position_threshold,
-                                      min_rating, max_rating, time_controls)
-        
-        elif opening_move:
-            # Build from opening move (original behavior)
-            board = chess.Board()
-            
-            try:
-                move = board.parse_san(opening_move)
-                board.push(move)
-            except ValueError:
-                raise ValueError(f"Invalid opening move: {opening_move}")
-            
-            root = RepertoireNode(move=opening_move, fen=board.fen())
-            
-            self._build_repertoire_bfs(root, max_depth, initial_threshold, position_threshold,
-                                      min_rating, max_rating, time_controls)
-        
+                                      min_rating, max_rating, time_controls, current_depth)
         else:
-            raise ValueError("Either opening_move or fen must be provided")
+            # If no initial moves, start from the default board (empty moves)
+            root = RepertoireNode(move="Starting Position", fen=board.fen())
+            self._build_repertoire_bfs(root, max_depth, initial_threshold, position_threshold,
+                                      min_rating, max_rating, time_controls, 0)
         
         return root
     
     def _build_repertoire_bfs(self, root: RepertoireNode, max_depth: int, initial_threshold: float, 
-                             position_threshold: float, min_rating: int, max_rating: int, 
-                             time_controls: List[str]):
-        # Queue contains tuples of (node, board, current_depth, is_white_turn)
+                              position_threshold: float, min_rating: int, max_rating: int, 
+                              time_controls: List[str], initial_depth: int):        # Queue contains tuples of (node, board, current_depth, is_white_turn)
         queue = deque()
         
-        # Initialize queue based on root type
-        if root.move == "Position":
-            # Starting from arbitrary position
-            board = chess.Board(root.fen)
-            is_white_turn = board.turn == chess.WHITE
-            queue.append((root, board, 0, is_white_turn))
-        else:
-            # Starting from opening move
-            board = chess.Board()
-            move = board.parse_san(root.move)
-            board.push(move)
-            queue.append((root, board, 1, False))  # After opening move, it's Black's turn
+        # Initialize queue with the root node and its initial depth
+        board = chess.Board(root.fen)
+        is_white_turn = board.turn == chess.WHITE
+        queue.append((root, board, initial_depth, is_white_turn))
         
         while queue:
             current_node, current_board, current_depth, is_white_turn = queue.popleft()
@@ -248,8 +235,7 @@ def main():
     config = load_config(config_file)
     
     # Extract configuration values
-    opening = config['opening']['move']
-    fen = config['opening']['fen']
+    initial_moves = config['opening'].get('initial_moves', None)
     depth = config['analysis']['depth']
     min_rating = config['analysis']['min_rating']
     max_rating = config['analysis']['max_rating']
@@ -261,21 +247,14 @@ def main():
     position_threshold = config['analysis']['position_threshold']
     min_games = config['analysis']['min_games']
     white_win_rate_threshold = config['analysis']['white_win_rate_threshold']
-    cache_file = config['api']['cache_file']
     api_key = os.getenv('LICHESS_API_KEY')
-    api_delay = config['api']['api_delay']
     output_pgn = config['output']['pgn_file']
 
     # Validate configuration
-    if not opening and not fen:
-        raise ValueError("Either opening.move or opening.fen must be provided in config")
-    if opening and fen:
-        raise ValueError("Cannot specify both opening.move and opening.fen in config")
+    if initial_moves is None:
+        print("No initial moves provided. Starting from default board position.")
     
-    if fen:
-        print(f"Generating repertoire from FEN position for {depth} moves deep...")
-    else:
-        print(f"Generating {opening} repertoire for {depth} moves deep...")
+    print(f"Generating repertoire for {initial_moves if initial_moves else 'starting position'} for {depth} moves deep...")
 
     print(f"Parameters: depth={depth}, min_rating={min_rating}, max_rating={max_rating}, time_controls={time_controls}")
     print(f"Thresholds: initial={initial_threshold}, position={position_threshold}")
@@ -283,7 +262,7 @@ def main():
     print()
     
     # Initialize components
-    lichess_api = LichessAPI(cache_file, api_key, api_delay)
+    lichess_api = LichessAPI(api_key)
     move_analyzer = MoveAnalyzer(win_rate_weight, popularity_weight, sharpness_weight)
     repertoire_builder = RepertoireBuilder(lichess_api, move_analyzer, 
                                          min_games, 
@@ -292,8 +271,7 @@ def main():
     try:
         print("Building repertoire tree...")
         root = repertoire_builder.build_repertoire(
-            opening,
-            fen,
+            initial_moves,
             depth,
             initial_threshold,
             position_threshold,
@@ -308,7 +286,7 @@ def main():
         print(f"Generating PGN: {output_pgn}")
         include_comments = config.get('output', {}).get('include_score_comments', True)
         pgn_generator = PGNGenerator(include_score_comments=include_comments)
-        title = f"{opening} Repertoire" if opening else "Position Repertoire"
+        title = f"{initial_moves} Repertoire" if initial_moves else "Starting Position Repertoire"
         pgn_content = pgn_generator.generate_pgn(root, title)
         
         with open(output_pgn, 'w') as f:

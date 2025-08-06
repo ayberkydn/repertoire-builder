@@ -6,7 +6,7 @@ if TYPE_CHECKING:
 
 
 class RepertoireNode:
-    def __init__(self, move: Optional[str] = None, fen: str = None, 
+    def __init__(self, move: Optional[str] = None, fen: Optional[str] = None, 
                  move_stats: Optional[MoveStats] = None, score_details: Optional['ScoreDetails'] = None):
         self.move = move
         self.fen = fen

@@ -1,6 +1,5 @@
 opening:
-  move: e4
-  fen: null
+  initial_moves: e4
 
 analysis:
   depth: 11
@@ -16,8 +15,7 @@ analysis:
   white_win_rate_threshold: 0.55
 
 api:
-  cache_file: data/cache.json
-  api_delay: 0.1
+  # Cache file is fixed at data/cache.json
 
 output:
   pgn_file: output/blitz_1600.pgn

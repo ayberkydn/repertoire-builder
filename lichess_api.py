@@ -8,15 +8,18 @@ import chess
 
 
 class LichessAPI:
-    def __init__(self, cache_file: str, api_key: Optional[str], api_delay: float):
+    def __init__(self, api_key: Optional[str]):
         self.base_url = "https://explorer.lichess.ovh"
-        self.cache_file = Path(cache_file)
+        self.cache_file = Path("data/cache.json")  # Fixed cache file location
         self.api_key = api_key
-        self.api_delay = api_delay
+        self.api_delay = 0.075  # Hardcoded 0.075 second delay for respectful API usage
         self.cache = self._load_cache()
         self.last_request_time = 0
     
     def _load_cache(self) -> Dict:
+        """Load cache with automatic recovery from backup if main file is corrupted."""
+        
+        # Try to load main cache file
         if self.cache_file.exists():
             try:
                 with open(self.cache_file, 'r') as f:
@@ -25,29 +28,74 @@ class LichessAPI:
                         return json.load(f)
                     else:
                         return yaml.safe_load(f) or {}
-            except (yaml.YAMLError, IOError, json.JSONDecodeError):
+            except (yaml.YAMLError, IOError, json.JSONDecodeError) as e:
+                print(f"Warning: Main cache file corrupted: {e}")
+                
+                # Try to recover from backup
+                backup_file = self.cache_file.with_suffix(self.cache_file.suffix + '.backup')
+                if backup_file.exists():
+                    try:
+                        print("Attempting to recover from backup...")
+                        with open(backup_file, 'r') as f:
+                            if self.cache_file.suffix == '.json':
+                                import json
+                                recovered_cache = json.load(f)
+                            else:
+                                recovered_cache = yaml.safe_load(f) or {}
+                        
+                        print(f"✅ Successfully recovered cache from backup ({len(recovered_cache)} entries)")
+                        return recovered_cache
+                        
+                    except (yaml.YAMLError, IOError, json.JSONDecodeError) as backup_error:
+                        print(f"❌ Backup recovery failed: {backup_error}")
+                
+                print("Starting with empty cache...")
                 return {}
+        
         return {}
     
     def _save_cache(self):
-        with open(self.cache_file, 'w') as f:
-            if self.cache_file.suffix == '.json':
-                import json
-                json.dump(self.cache, f, indent=2)
-            else:
-                yaml.dump(self.cache, f, default_flow_style=False, indent=2)
+        """Save cache with atomic write and backup to prevent corruption on interruption."""
+        import shutil
+        
+        # Create backup if cache file exists
+        if self.cache_file.exists():
+            backup_file = self.cache_file.with_suffix(self.cache_file.suffix + '.backup')
+            shutil.copy2(str(self.cache_file), str(backup_file))
+        
+        # Create temporary file in same directory
+        temp_file = self.cache_file.with_suffix(self.cache_file.suffix + '.tmp')
+        
+        try:
+            # Write to temporary file first
+            with open(temp_file, 'w') as f:
+                if self.cache_file.suffix == '.json':
+                    import json
+                    json.dump(self.cache, f, indent=2)
+                else:
+                    yaml.dump(self.cache, f, default_flow_style=False, indent=2)
+            
+            # Atomic rename (safe on most filesystems)
+            shutil.move(str(temp_file), str(self.cache_file))
+            
+        except Exception as e:
+            # Clean up temp file if something went wrong
+            if temp_file.exists():
+                temp_file.unlink()
+            print(f"Warning: Cache save failed: {e}")
+            raise e
     
     def _get_cache_key(self, fen: str, min_rating: int, max_rating: int, time_controls: List[str]) -> str:
         key_data = f"{fen}_{min_rating}_{max_rating}_{'_'.join(sorted(time_controls))}"
         return hashlib.md5(key_data.encode()).hexdigest()
     
     def _rate_limit(self):
-        if not self.api_key:  # Only rate limit if no API key
-            current_time = time.time()
-            time_since_last = current_time - self.last_request_time
-            if time_since_last < self.api_delay:
-                time.sleep(self.api_delay - time_since_last)
-            self.last_request_time = time.time()
+        """Always apply 0.075 second rate limiting to be respectful to Lichess servers."""
+        current_time = time.time()
+        time_since_last = current_time - self.last_request_time
+        if time_since_last < self.api_delay:
+            time.sleep(self.api_delay - time_since_last)
+        self.last_request_time = time.time()
     
     def get_position_stats(self, fen: str, min_rating: int, max_rating: int,
                           time_controls: List[str], include_rating_breakdown: bool) -> Optional[Dict]:

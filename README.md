@@ -17,7 +17,7 @@ Generate sophisticated chess opening repertoires using Lichess statistics with a
 ```
 /repertoire/
 ├── data/                   # Cache and data files
-│   ├── cache.json         # Main Lichess API cache
+│   ├── cache.json         # Fixed Lichess API cache location
 │   └── README.md          # Data directory documentation
 ├── output/                # Generated repertoire files
 │   ├── *.pgn             # PGN format repertoires
@@ -72,8 +72,7 @@ uv run repertoire_builder.py clean_pgn_config.yaml
 
 ```yaml
 opening:
-  move: "Nf3"                    # Opening move in SAN notation
-  fen: null                      # Alternative: start from specific FEN
+  initial_moves: "e4 e5 Nf3"  # Start from a sequence of moves (SAN notation)
 
 analysis:
   depth: 10                      # Maximum depth in moves
@@ -95,8 +94,8 @@ analysis:
   white_win_rate_threshold: 0.55  # Minimum win rate to continue line
 
 api:
-  cache_file: "data/cache.json"  # Cache file location
-  api_delay: 0.01               # Delay between API calls (seconds)
+  # Cache file is fixed at data/cache.json
+  # API delay is hardcoded at 0.075 seconds for respectful usage
 
 output:
   pgn_file: "output/repertoire.pgn"     # Output PGN file
@@ -129,7 +128,7 @@ python repertoire_builder.py --opening e4
 
 **Priority:** Command line > Environment variable > .env file
 
-With an API key, requests are not rate-limited and the `--api-delay` parameter is ignored.
+**Note:** The system always enforces a 0.075 second delay between API requests to be respectful to Lichess servers, regardless of API key usage.
 
 ## Advanced Move Scoring
 
@@ -215,12 +214,12 @@ Total: 0.440 = Score: 0.538*0.6 + Pref: 0.500*0.05 + Sharp: 0.265*0.35
 
 ## Cache System
 
-The system maintains a persistent JSON cache of Lichess API responses to:
+The system maintains a persistent JSON cache at `data/cache.json` for Lichess API responses to:
 - Avoid redundant API calls
 - Speed up subsequent runs
 - Respect API rate limits
 
-Cache keys are generated from position FEN, rating filter, and time controls.
+Cache keys are generated from position FEN, rating filter, and time controls. The cache file location is fixed and cannot be changed.
 
 ## Example Configurations
 
@@ -228,7 +227,7 @@ Cache keys are generated from position FEN, rating filter, and time controls.
 ```yaml
 # tactical_config.yaml
 opening:
-  move: "e4"
+  initial_moves: "e4"
 
 analysis:
   depth: 8
@@ -252,7 +251,7 @@ output:
 ```yaml
 # positional_config.yaml
 opening:
-  move: "d4"
+  initial_moves: "d4"
 
 analysis:
   depth: 10
