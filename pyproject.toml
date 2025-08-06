@@ -1,0 +1,15 @@
+[project]
+name = "chess-repertoire-generator"
+version = "0.1.0"
+description = "Generate chess opening repertoires using Lichess statistics"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31.0",
+    "python-chess>=1.999",
+    "click>=8.1.0",
+    "pyyaml>=6.0.2",
+]
+
+[project.scripts]
+chess-repertoire = "main:main"

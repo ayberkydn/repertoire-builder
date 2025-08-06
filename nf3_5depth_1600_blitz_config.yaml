@@ -1,0 +1,26 @@
+opening:
+  move: e4
+  fen: null
+
+analysis:
+  depth: 19
+  min_rating: 1600
+  max_rating: 1600
+  time_controls:
+    - blitz
+  win_rate_weight: 0.95
+  popularity_weight: 0.04
+  sharpness_weight: 0.01
+
+  initial_threshold: 0.05
+  position_threshold: 0.11
+
+  min_games: 200
+  white_win_rate_threshold: 0.60
+
+api:
+  cache_file: data/cache.json
+  api_delay: 0.05
+
+output:
+  pgn_file: output/nf3_1600_blitz.pgn

@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Generated files
+output/*.pgn
+output/*.txt
+data/cache.json
+data/*_cache.json
+
+# Keep directory structure but ignore generated content
+!output/README.md
+!data/README.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
