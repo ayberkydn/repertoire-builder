@@ -1,5 +1,5 @@
 opening:
-  initial_moves: e4 Nf3
+  initial_moves: e4
 
 analysis:
   depth: 11

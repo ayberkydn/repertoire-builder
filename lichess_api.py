@@ -103,7 +103,7 @@ class LichessAPI:
         cache_key = self._get_cache_key(fen, min_rating, max_rating, time_controls)
         
         if cache_key in self.cache:
-            print(f"Cache hit for position: {fen[:20]}...")
+
             return self.cache[cache_key]
         
         # Lichess ratings are in 100-point brackets: 1600, 1700, 1800, etc.
@@ -136,7 +136,7 @@ class LichessAPI:
                 self.cache[cache_key] = processed_data
                 self._save_cache()
                 
-                print(f"API call for position: {fen[:20]}...")
+
                 return processed_data
                 
             except requests.RequestException as e:
